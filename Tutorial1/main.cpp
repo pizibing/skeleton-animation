@@ -24,11 +24,22 @@ static CgProgram cgProgram;
 #define MAX_BONECOUNT			20
 #define MAX_KFCOUNT				30
 #define MAX_FRAMES				100
+#define MAX_VXCOUNT				4
+
 
 typedef unsigned char uint8_t;
 typedef unsigned long int uint32_t;
 
 #define RAD2DEG (180.0/M_PI)
+
+typedef struct
+{
+	float x,	/* Coords */
+		y,
+		r,	/* Colors or texture infos */
+		g,
+		b;
+} Vertex;
 
 typedef struct
 {
@@ -53,6 +64,9 @@ typedef struct _Bone
 		*parent;			/* Parent bone */
 	uint32_t keyframeCount;	/* Number of keyframes */
 	Keyframe keyframe[MAX_KFCOUNT];	/* Animation for this bone */
+
+	uint32_t vertexCount;
+	Vertex vertex[MAX_VXCOUNT];
 } Bone;
 
 Bone *root;
@@ -268,6 +282,36 @@ Bone *boneLoadStructure(char *path)
 	return root;
 }
 
+void boneGenQuads(Bone *root)
+{
+	int i;
+
+	if (!root)
+		return;
+
+	root->vertex[0].x = 0.0;
+	root->vertex[0].y = 5.0;
+
+	root->vertex[1].x = 0.0;
+	root->vertex[1].y = -5.0;
+
+	root->vertex[2].x = root->l;
+	root->vertex[2].y = -5.0;
+
+	root->vertex[3].x = root->l;
+	root->vertex[3].y = 5.0;
+
+	for (i = 0; i < 4; i++)
+	{
+		root->vertex[i].r = 200 / 256.0;
+		root->vertex[i].g = 100 / 256.0;
+		root->vertex[i].b = 50 / 256.0;
+	}
+
+	for (i = 0; i < root->childCount; i++)
+		boneGenQuads(root->child[i]);
+}
+
 void boneAnimate(Bone *root, int time)
 {
 	uint32_t i;
@@ -322,6 +366,17 @@ void boneDraw(Bone *root)
 	glTranslatef(root->x, root->y, 0.0);
 	glRotatef((GLfloat)(RAD2DEG*(root->a)), 0.0, 0.0, 1.0);
 
+	/**** This code draws the quads ****/
+	glBegin(GL_QUADS);
+	for (i = 0; i < 4; i++)
+	{
+		glColor3f(root->vertex[i].r, root->vertex[i].g, root->vertex[i].b);
+		glVertex2f(root->vertex[i].x, root->vertex[i].y);
+	}
+	glEnd();
+
+	/* Then draw the bones normally */
+
 	glBegin(GL_LINES);
 
 	if (!strcmp(root->name, currentName))
@@ -372,6 +427,7 @@ void drawScene()
 	glLoadIdentity();
 	
 	boneDraw(root);
+	boneGenQuads(root);
 	if (animating)
 	{
 		boneAnimate(root, frameNum);
