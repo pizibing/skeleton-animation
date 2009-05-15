@@ -1,0 +1,10 @@
+struct vfconn {
+  float4 color : COLOR;
+};
+
+vfconn fragment(float4 color : COLOR)
+{
+  vfconn OUT;
+  OUT.color = color;
+  return OUT;
+}

@@ -1,0 +1,34 @@
+/*
+	From the CG tutorial - modified
+*/
+
+struct appdata {
+  float4 position : POSITION;
+  float4 color	  : COLOR;
+  };
+
+struct vfconn {
+  float4 position : POSITION;
+  float3 color    : COLOR;
+};
+
+vfconn vertex(appdata IN , uniform float4x4 ModelViewProj)
+{
+  vfconn OUT;
+  float3 temp;
+  
+  temp.x = IN.position.x;
+  temp.y = IN.position.y;
+  temp.z = IN.position.z;
+
+  OUT.position = IN.position;
+
+  OUT.position.y = temp.y*cos(radians(-30.0))-temp.z*sin(radians(-30.0)); 
+  OUT.position.z = temp.y*sin(radians(-30.0))+temp.z*cos(radians(-30.0));
+    
+  OUT.position = mul(ModelViewProj,OUT.position);
+ 
+  OUT.color = IN.color;
+
+  return OUT; 
+}
