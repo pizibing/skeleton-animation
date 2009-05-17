@@ -25,6 +25,8 @@ static CgProgram cgProgram;
 #define MAX_KFCOUNT				30
 #define MAX_FRAMES				100
 #define MAX_VXCOUNT				4
+#define MAX_MESHVXCOUNT			(MAX_VXCOUNT * MAX_BONECOUNT)
+
 
 
 typedef unsigned char uint8_t;
@@ -69,6 +71,21 @@ typedef struct _Bone
 	Vertex vertex[MAX_VXCOUNT];
 } Bone;
 
+typedef struct
+{
+	Vertex v;			/* Info on this vertex: position color etc */
+	int boneCount;			/* Number of bones this vertex is connected to*/
+	float weight[MAX_BONECOUNT];	/* Weight for each bone connected */
+	Bone *bone[MAX_BONECOUNT];	/* Pointer to connected bones */
+} BoneVertex;
+
+typedef struct
+{
+	int vertexCount;		/* Number of vertexes in this mesh */
+	BoneVertex v[MAX_MESHVXCOUNT];	/* Vertices of the mesh */
+} Mesh;
+
+Mesh body;
 Bone *root;
 
 char *currentName = NULL;
@@ -163,6 +180,21 @@ void boneDumpTree(Bone *root, uint8_t level)
 	/* Recursively call this on my children */
 	for (i = 0; i < root->childCount; i++)
 		boneDumpTree(root->child[i], level + 1);
+}
+
+void getBoneParentMatrix(Bone *b)
+{
+	if (!b)
+		return;
+
+	if (b->parent)
+	{
+		getBoneParentMatrix(b->parent);
+		glTranslatef(b->parent->l, 0.0, 0.0);
+	}
+
+	glTranslatef(b->x, b->y, 0.0); /* For a connected stucture, this is usually 0, 0, 0 */
+	glRotatef(RAD2DEG*(b->a), 0.0, 0.0, 1.0);
 }
 
 Bone *boneLoadStructure(char *path)
@@ -281,6 +313,96 @@ Bone *boneLoadStructure(char *path)
 	fclose(file);
 
 	return root;
+}
+
+void getBoneMatrix(Bone *b, float m[16])
+{
+	if (!b)
+		return;
+
+	glPushMatrix();
+	glLoadIdentity();
+
+	if (b->parent)
+	{
+		getBoneParentMatrix(b->parent);
+		glTranslatef(b->parent->l, 0.0, 0.0);
+	}
+
+	/* Now we are at the end of parent's bone
+	* rotate for this bone and
+	* get the matrix and
+	* return
+	*/
+	glRotatef(RAD2DEG*(b->a), 0.0, 0.0, 1.0);
+	glGetFloatv(GL_MODELVIEW_MATRIX, m);
+
+	glPopMatrix();
+}
+
+float getBoneAngle(Bone *b)
+{
+	if (!b)
+		return 0;
+
+	return b->a + getBoneAngle(b->parent);
+}
+
+void meshDraw(Mesh *mesh)
+{
+	int i, j,
+		n;
+
+	float v[MAX_VXCOUNT * MAX_BONECOUNT][2], /* End vertexes */
+		m[16],
+		tmp[4],
+		x, y;
+
+	n = mesh->vertexCount;
+
+	glPointSize(3.0);
+
+	tmp[0] = tmp[1] = 0.0;
+	tmp[2] = 1.0;
+	tmp[3] = 1.0; /* w is always 1.0 */
+
+	/* Processing loop */
+	for (i = 0; i < n; i++)
+	{
+		v[i][0] = v[i][1] = 0.0;
+		tmp[0] = mesh->v[i].v.x;
+		tmp[1] = mesh->v[i].v.y;
+
+		/* Loop thru the relations with each bone */
+		for (j = 0; j < mesh->v[i].boneCount; j++)
+		{
+			glPushMatrix();
+			glLoadIdentity();
+
+			/* Get the jth bone position */
+			getBoneMatrix(mesh->v[i].bone[j], m);
+
+			glTranslatef(m[12], m[13], 0.0);
+			glRotatef(RAD2DEG*(getBoneAngle(mesh->v[i].bone[j])), 0.0, 0.0, 1.0);
+
+			glGetFloatv(GL_MODELVIEW_MATRIX, m);
+			glPopMatrix();
+
+			v[i][0] += (tmp[0] * m[0] + tmp[1] * m[4] + m[12]) * mesh->v[i].weight[j];
+			v[i][1] += (tmp[0] * m[1] + tmp[1] * m[5] + m[13]) * mesh->v[i].weight[j];	
+		}
+	}
+
+	/* Draw loop */
+	glPushAttrib(GL_ALL_ATTRIB_BITS);
+
+	glBegin(GL_POINTS);
+	for (i = 0; i < n; i++)
+		glVertex2f(v[i][0], v[i][1]);
+	glEnd();
+
+	glPopAttrib();
+
 }
 
 int boneGetJoints(Bone *b, Vertex *v)
@@ -471,6 +593,8 @@ void boneDraw(Bone *root)
 	for (i = 0; i < root->childCount; i++)
 		boneDraw(root->child[i]);
 
+	meshDraw(&body);
+
 	glPopMatrix();
 }
 
@@ -657,6 +781,49 @@ void inputKey(int key, int x, int y)
 }
 
 
+void meshLoadData(char *file, Mesh *mesh, Bone *root)
+{
+	int i, j;
+	char buffer[256], blist[256], *tok, *str;
+	FILE *fd = fopen(file, "r");
+
+	int id;
+	float x, y, w;
+
+	/* Get the number of vertexes in this mesh */
+	fgets(buffer, 256, fd);
+	sscanf(buffer, "%d\n", &(mesh->vertexCount));
+
+	/* Now read the vertex data */
+	for (i = 0; i < mesh->vertexCount; i++)
+	{
+		fgets(buffer, 256, fd);
+		sscanf(buffer, "%f %f %[^\n]\n", &x, &y, blist);
+		mesh->v[i].v.x = x;
+		mesh->v[i].v.y = y;
+
+		str = blist;
+		j = 0;
+		while ((tok = strtok(str, " ")))
+		{
+			str = NULL;
+			mesh->v[i].bone[j] = boneFindByName(root, tok);
+			printf("Vertex %d bone %s", j, tok);
+			tok = strtok(NULL, " ");
+			mesh->v[i].weight[j] = atof(tok);
+			printf(" is weighted %f\n", mesh->v[i].weight[j]);
+
+			j++;
+		}
+		/* Count of relations */
+		mesh->v[i].boneCount = j;
+		printf("This vertex has %d relations\n", j);
+
+	}
+
+	fclose(fd);
+}
+
 int main(int argc, char **argv)
 {
 	int i;
@@ -706,6 +873,7 @@ int main(int argc, char **argv)
 	}
 	*/
 	root = boneLoadStructure("human.txt");
+	meshLoadData("mesh.txt", &body, root);
 
 	boneListNames(root, names);
 
