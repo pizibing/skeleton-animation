@@ -82,7 +82,7 @@ Bone *boneAddChild(Bone *root, float x, float y, float a, float l, unsigned int 
 {
 	Bone *t;
 	int i;
-
+	
 	if (!root) /* If there is no root, create one */
 	{
 		if (!(root = (Bone *)malloc(sizeof(Bone))))
@@ -112,7 +112,8 @@ Bone *boneAddChild(Bone *root, float x, float y, float a, float l, unsigned int 
 	root->keyframeCount = 0;
 	root->offA = 0;
 	root->offL = 0;
-
+	root->vertexCount = 4;
+	
 	if (name)
 		strcpy(root->name, name);
 	else
@@ -282,6 +283,64 @@ Bone *boneLoadStructure(char *path)
 	return root;
 }
 
+int boneGetJoints(Bone *b, Vertex *v)
+{
+	int i ,
+		cnt = 0;
+
+	float m[4 * 4],
+		x0,
+		y0;
+
+	if (!b || !v || !(b->childCount))
+		return 0;
+
+	/* We are creating a joint between this bone b and its children
+	* so get its ending vertexes
+	*/
+	v[0] = b->vertex[b->vertexCount - 2];
+	v[1] = b->vertex[b->vertexCount - 1];
+	cnt = 2;
+
+	glPushMatrix();
+	glLoadIdentity();
+
+	/* Translate the vertex for the length of the bone */
+	glTranslatef(b->l, 0.0, 0.0);
+
+	/* Now get first 2 vertex for each children */
+	for (i = 0; i < b->childCount; i += 2)	
+	{
+		v[2 + i] = b->child[i]->vertex[0];
+		v[3 + i] = b->child[i]->vertex[1];
+		cnt += 2;
+
+		/* Transform the vertices */
+		glPushMatrix();
+		glRotatef((GLfloat)(RAD2DEG*(b->child[i]->a)), 0.0, 0.0, 1.0);
+
+		/* Get the current matrix */
+		glGetFloatv(GL_MODELVIEW_MATRIX, m);
+
+		/* Translate the vertexes multiplying the vector with the actual matrix */
+		x0 = v[2 + i].x;
+		y0 = v[2 + i].y;
+		v[2 + i].x = x0 * m[0] + y0 * m[4] + m[12];
+		v[2 + i].y = x0 * m[1] + y0 * m[5] + m[13];
+
+		x0 = v[3 + i].x;
+		y0 = v[3 + i].y;
+		v[3 + i].x = x0 * m[0] + y0 * m[4] + m[12];
+		v[3 + i].y = x0 * m[1] + y0 * m[5] + m[13];
+
+		glPopMatrix();
+	}
+
+	glPopMatrix();
+
+	return cnt;
+}
+
 void boneGenQuads(Bone *root)
 {
 	int i;
@@ -353,7 +412,8 @@ void boneAnimate(Bone *root, int time)
 /* TODO: Actually this doesn't handle absolute bones */
 void boneDraw(Bone *root)
 {
-	int i;
+	int i, count;
+	Vertex vert[6];
 
 	glPushMatrix();
 
@@ -392,7 +452,16 @@ void boneDraw(Bone *root)
 		glColor3f(0.0, 1.0, 0.0);
 
 	glVertex2f(root->l, 0);
+	glEnd();
 
+	/* Get joint vertexes */
+	count = boneGetJoints(root, vert);
+
+	/* Draw the joint */
+	glColor3f(0.0, 0.0, 1.0);
+	glBegin(GL_POLYGON);
+	for (i = 0; i < count; i++)
+		glVertex2f(vert[i].x, vert[i].y);
 	glEnd();
 
 	/* Translate to reach the new starting position */
@@ -426,8 +495,8 @@ void drawScene()
 	
 	glLoadIdentity();
 	
-	boneDraw(root);
 	boneGenQuads(root);
+	boneDraw(root);
 	if (animating)
 	{
 		boneAnimate(root, frameNum);
