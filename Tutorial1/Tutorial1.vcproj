@@ -208,6 +208,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\mesh.txt"
+					>
+				</File>
+				<File
 					RelativePath=".\snake.txt"
 					>
 				</File>
