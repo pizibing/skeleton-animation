@@ -637,7 +637,9 @@ void drawScene()
 		increaseFrameNum();
 
 		// move the skeleton to the right 
-		//root->x = root->x + 0.5;
+		root->x = root->x + 1;
+		if(root->x > 170)
+			root->x = -150;
 	}
 	glutPostRedisplay();
 }
