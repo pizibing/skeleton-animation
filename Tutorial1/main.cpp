@@ -23,7 +23,7 @@ static CgProgram cgProgram;
 #define BONE_ABSOLUTE			(BONE_ABSOLUTE_ANGLE | BONE_ABSOLUTE_POSITION)
 #define MAX_BONECOUNT			20
 #define MAX_KFCOUNT				30
-#define MAX_FRAMES				100
+#define MAX_FRAMES				400
 #define MAX_VXCOUNT				4
 #define MAX_MESHVXCOUNT			(MAX_VXCOUNT * MAX_BONECOUNT)
 
@@ -566,12 +566,19 @@ void boneDraw(Bone *root)
 	else
 		glColor3f(1.0, 0.0, 0.0);
 
+	if(strcmp(root->name, "RLeg") == 0 || strcmp(root->name, "RLeg2") == 0)
+		glColor3f(1.0, 0.0, 0.0);
+
 	glVertex2f(0, 0);
 
 	if (!strcmp(root->name, currentName))
 		glColor3f(1.0, 1.0, 0.0);
 	else
 		glColor3f(0.0, 1.0, 0.0);
+
+
+	if(strcmp(root->name, "RLeg") == 0 || strcmp(root->name, "RLeg2") == 0)
+		glColor3f(1.0, 0.0, 0.0);
 
 	glVertex2f(root->l, 0);
 	glEnd();
@@ -593,7 +600,8 @@ void boneDraw(Bone *root)
 	for (i = 0; i < root->childCount; i++)
 		boneDraw(root->child[i]);
 
-	meshDraw(&body);
+	// stop drawing mesh for now
+	//meshDraw(&body);
 
 	glPopMatrix();
 }
@@ -625,6 +633,9 @@ void drawScene()
 	{
 		boneAnimate(root, frameNum);
 		increaseFrameNum();
+
+		// move the skeleton to the right 
+		//root->x = root->x + 0.5;
 	}
 	glutPostRedisplay();
 }
