@@ -566,7 +566,8 @@ void boneDraw(Bone *root)
 	else
 		glColor3f(1.0, 0.0, 0.0);
 
-	if(strcmp(root->name, "RLeg") == 0 || strcmp(root->name, "RLeg2") == 0)
+	if(strcmp(root->name, "RLeg") == 0 || strcmp(root->name, "RLeg2") == 0 ||
+		 strcmp(root->name, "RArm") == 0 || strcmp(root->name, "RArm2") == 0)
 		glColor3f(1.0, 0.0, 0.0);
 
 	glVertex2f(0, 0);
@@ -577,7 +578,8 @@ void boneDraw(Bone *root)
 		glColor3f(0.0, 1.0, 0.0);
 
 
-	if(strcmp(root->name, "RLeg") == 0 || strcmp(root->name, "RLeg2") == 0)
+	if(strcmp(root->name, "RLeg") == 0 || strcmp(root->name, "RLeg2") == 0 ||
+		strcmp(root->name, "RArm") == 0 || strcmp(root->name, "RArm2") == 0)
 		glColor3f(1.0, 0.0, 0.0);
 
 	glVertex2f(root->l, 0);
