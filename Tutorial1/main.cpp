@@ -23,7 +23,7 @@ static CgProgram cgProgram;
 #define BONE_ABSOLUTE			(BONE_ABSOLUTE_ANGLE | BONE_ABSOLUTE_POSITION)
 #define MAX_BONECOUNT			20
 #define MAX_KFCOUNT				30
-#define MAX_FRAMES				400
+#define MAX_FRAMES				160
 #define MAX_VXCOUNT				4
 #define MAX_MESHVXCOUNT			(MAX_VXCOUNT * MAX_BONECOUNT)
 
