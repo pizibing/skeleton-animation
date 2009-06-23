@@ -610,9 +610,9 @@ void boneDraw(Bone *root)
 
 void reshape(int w, int h)
 {
-	glViewport(0, 0, 400, 400);
+	glViewport(0, 0, 600, 600);
 	glMatrixMode(GL_PROJECTION);
-	glOrtho(-200, 200, -200, 200, -1, 1);
+	glOrtho(-200, 500, -200, 500, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -638,7 +638,7 @@ void drawScene()
 
 		// move the skeleton to the right 
 		root->x = root->x + 1;
-		if(root->x > 170)
+		if(root->x > 470)
 			root->x = -150;
 	}
 	glutPostRedisplay();
