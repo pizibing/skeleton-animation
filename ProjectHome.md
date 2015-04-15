@@ -1,0 +1,1 @@
+A small project based on skeleton animation developed in Cg using Glut and OpenGL
